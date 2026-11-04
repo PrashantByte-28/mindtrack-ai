@@ -1,0 +1,11 @@
+streamlit
+openai
+pandas
+numpy
+plotly
+sqlalchemy
+pydantic
+python-dotenv
+groq
+reportlab
+pytest
