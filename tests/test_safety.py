@@ -4,11 +4,14 @@ from pathlib import Path
 
 import pytest
 
-# Add the project root to Python's import path.
+# Add the project root and src to Python's import path.
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PROJECT_ROOT))
+SRC_DIR = PROJECT_ROOT / "src"
+for _p in (str(SRC_DIR), str(PROJECT_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
-from src.mindtrack_ai.safety import check_message_safety
+from mindtrack_ai.safety import check_message_safety
 
 
 @pytest.mark.parametrize(

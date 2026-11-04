@@ -7,7 +7,7 @@ from collections import Counter
 
 import pandas as pd
 
-from src.mindtrack_ai.llm_service import generate_response
+from mindtrack_ai.llm_service import generate_response
 
 
 def build_mood_summary(records: pd.DataFrame) -> dict:

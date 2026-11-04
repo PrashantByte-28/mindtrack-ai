@@ -1,5 +1,14 @@
 import logging
+import sys
 from datetime import date
+from pathlib import Path
+
+# Ensure 'src' and project root are always on sys.path regardless of how Streamlit or Python is launched
+PROJECT_ROOT = Path(__file__).resolve().parent
+SRC_DIR = PROJECT_ROOT / "src"
+for _p in (str(SRC_DIR), str(PROJECT_ROOT)):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 import pandas as pd
 import plotly.express as px
@@ -463,9 +472,13 @@ if st.session_state.authenticated_user is None:
         "**'What is the name of this wellness companion?'** (Answer: **`MindTrack`**)."
     )
     st.stop()
+    sys.exit(0)
 
 # Authenticated user session
-current_user = st.session_state.authenticated_user
+current_user = st.session_state.get("authenticated_user")
+if current_user is None:
+    st.stop()
+    sys.exit(0)
 
 # Sidebar user account controls
 with st.sidebar:
@@ -1182,7 +1195,7 @@ with dashboard_tab:
                             "your entries and are not diagnoses."
                         )
 
-                        from src.mindtrack_ai.trend_service import (
+                        from mindtrack_ai.trend_service import (
                             build_mood_trend_analysis,
                         )
 
