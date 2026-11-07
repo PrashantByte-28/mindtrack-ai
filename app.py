@@ -1,6 +1,6 @@
 import logging
 import sys
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 # Ensure 'src' and project root are always on sys.path regardless of how Streamlit or Python is launched
@@ -12,6 +12,8 @@ for _p in (str(SRC_DIR), str(PROJECT_ROOT)):
 
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
+import plotly.io as pio
 import streamlit as st
 
 from mindtrack_ai.auth import (
@@ -54,127 +56,135 @@ st.set_page_config(
     layout="wide",
 )
 
-# Modern, responsive theme
+# Theme
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-    :root{--mt-primary:#8ED6B0;--mt-primary-dark:#B1E8C8;--mt-mint:#223B32;--mt-cream:#172B25;--mt-text:#F0F4EC;--mt-muted:#B4C7BC;--mt-border:#3B584B;--mt-glass:rgba(34,59,50,.58);--mt-glow:rgba(142,214,176,.35);--mt-ease:cubic-bezier(.22,.8,.3,1)}
-    html{scroll-behavior:smooth}
-    ::selection{background:rgba(142,214,176,.35);color:#fff}
-    ::-webkit-scrollbar{width:10px;height:10px}
-    ::-webkit-scrollbar-track{background:transparent}
-    ::-webkit-scrollbar-thumb{background:#3B584B;border-radius:10px;border:2px solid transparent;background-clip:padding-box}
-    ::-webkit-scrollbar-thumb:hover{background:#557966;background-clip:padding-box}
-    @keyframes mtRise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-    @keyframes mtFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(-30px,40px)}}
-    @keyframes mtSpin{to{transform:rotate(360deg)}}
-    @keyframes mtPulse{0%{box-shadow:0 0 0 0 rgba(142,214,176,.6)}100%{box-shadow:0 0 0 10px rgba(142,214,176,0)}}
-    @keyframes mtSway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(8deg)}}
-    @keyframes mtShimmer{from{background-position:0% 50%}to{background-position:100% 50%}}
-    @keyframes mtCycle{0%{opacity:0;transform:translateY(8px)}5%,30%{opacity:1;transform:none}35%,100%{opacity:0;transform:translateY(-8px)}}
+    @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,400..800&family=Figtree:wght@400;500;600;700&display=swap');
+    :root{
+      /* Midnight Slate Theme */
+      --mt-bg: #0F172A;
+      --mt-surface: #1E293B;
+      --mt-field: #0B1120;
+      --mt-line: #334155;
+      --mt-text: #F8FAFC;
+      --mt-muted: #94A3B8;
+      
+      /* Vibrant Accents */
+      --mt-accent: #3B82F6; /* Bright Blue */
+      --mt-accent-hover: #60A5FA;
+      --mt-on-accent: #FFFFFF;
+      --mt-sage: #10B981; /* Emerald */
+      --mt-rose: #F43F5E; /* Rose */
+    }
+    
+    @keyframes slideUpFade {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .block-container {
+      animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      max-width:1180px;
+      padding-top:2rem;
+      padding-bottom:5rem;
+    }
 
-    .stApp{isolation:isolate;color:var(--mt-text);background:radial-gradient(900px 500px at 5% -5%,rgba(142,214,176,.16),transparent 60%),radial-gradient(800px 500px at 100% 10%,rgba(169,164,216,.12),transparent 60%),radial-gradient(700px 500px at 50% 110%,rgba(242,184,128,.10),transparent 60%),linear-gradient(145deg,#12221B 0%,#1A2F27 55%,#20382E 100%);background-attachment:fixed}
-    .stApp::before,.stApp::after{content:"";position:fixed;border-radius:50%;filter:blur(40px);pointer-events:none;z-index:-1;animation:mtFloat 16s ease-in-out infinite}
-    .stApp::before{width:420px;height:420px;top:-120px;right:-100px;background:radial-gradient(circle,rgba(142,214,176,.20),transparent 70%)}
-    .stApp::after{width:360px;height:360px;bottom:-120px;left:-100px;background:radial-gradient(circle,rgba(169,164,216,.16),transparent 70%);animation-delay:-6s}
+    html{scroll-behavior:smooth}
+    ::selection{background:rgba(59,130,246,.35);color:#fff}
+    ::-webkit-scrollbar{width:9px;height:9px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:var(--mt-line);border-radius:9px}
+    ::-webkit-scrollbar-thumb:hover{background:#475569}
+
+    .stApp{background:var(--mt-bg);color:var(--mt-text)}
     [data-testid="stHeader"]{background:transparent}
     footer{visibility:hidden}
-    .block-container{max-width:1450px;padding-top:1.6rem;padding-bottom:5rem}
-    .stApp,.stApp p,.stApp label,.stApp li,.stApp button,.stApp input,.stApp textarea,.stApp h1,.stApp h2,.stApp h3,.stApp h4{font-family:'Plus Jakarta Sans','Segoe UI',system-ui,-apple-system,sans-serif!important}
-    h1,h2,h3,h4,[data-testid="stMarkdownContainer"] p,[data-testid="stMarkdownContainer"] li,label{color:var(--mt-text)!important}
-    h2,h3,h4{font-weight:750!important;letter-spacing:-.01em}
-    [data-testid="stCaptionContainer"],[data-testid="stMetricLabel"]{color:var(--mt-muted)!important}
-    hr{border:none!important;height:1px;background:linear-gradient(90deg,transparent,#3B584B,transparent)!important}
+    [data-testid="stSidebar"]{background:var(--mt-surface);border-right:1px solid var(--mt-line)}
 
-    /* Hero */
-    .mt-hero{position:relative;overflow:hidden;isolation:isolate;padding:clamp(20px,3.5vw,34px) clamp(18px,3.5vw,38px);margin-bottom:18px;border-radius:26px;background:linear-gradient(125deg,rgba(41,72,58,.94),rgba(27,48,40,.94) 55%,rgba(38,56,64,.88));border:1px solid rgba(142,214,176,.28);box-shadow:0 20px 60px rgba(0,0,0,.32),inset 0 1px 0 rgba(255,255,255,.06);transition:transform .3s var(--mt-ease),box-shadow .3s;animation:mtRise .6s var(--mt-ease) both}
-    .mt-hero::before{content:"";position:absolute;inset:-60%;z-index:-1;background:conic-gradient(from 0deg,transparent 0,rgba(142,214,176,.16) 12%,transparent 30%);animation:mtSpin 20s linear infinite}
-    .mt-hero:hover{transform:translateY(-3px);box-shadow:0 26px 70px rgba(0,0,0,.4),0 0 40px var(--mt-glow)}
-    .mt-leaf{position:absolute;top:14px;right:clamp(14px,4vw,40px);font-size:clamp(40px,7vw,76px);transform-origin:bottom center;animation:mtSway 6s ease-in-out infinite;filter:drop-shadow(0 8px 18px rgba(142,214,176,.4));user-select:none}
-    .mt-eyebrow{display:inline-flex;align-items:center;gap:8px;padding:6px 13px;border-radius:999px;font-size:11.5px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#8ED6B0;background:rgba(142,214,176,.12);border:1px solid rgba(142,214,176,.3)}
-    .mt-dot{width:8px;height:8px;border-radius:50%;background:#8ED6B0;animation:mtPulse 2s infinite}
-    .mt-title{margin:12px 0 6px;font-size:clamp(30px,5vw,50px);font-weight:800;line-height:1.1;letter-spacing:-.02em;color:transparent;background:linear-gradient(90deg,#F0F4EC,#B1E8C8 40%,#8ED6B0 65%,#F2B880 100%);background-size:200% auto;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:mtShimmer 6s ease-in-out infinite alternate}
-    .mt-sub{margin-bottom:10px;font-size:clamp(14px,1.8vw,17px);color:#B4C7BC}
-    .mt-affirm{position:relative;min-height:1.8em;margin-bottom:14px;font-size:clamp(13px,1.6vw,15px);font-weight:600;color:#F2B880}
-    .mt-affirm span{position:absolute;left:0;right:0;top:0;opacity:0;animation:mtCycle 12s infinite}
-    .mt-affirm span:nth-child(2){animation-delay:4s}
-    .mt-affirm span:nth-child(3){animation-delay:8s}
-    .mt-chips{display:flex;flex-wrap:wrap;gap:10px}
-    .mt-chip{cursor:default;padding:8px 15px;border-radius:999px;font-size:14px;font-weight:600;color:#E6EFE8;background:rgba(255,255,255,.05);border:1px solid rgba(142,214,176,.24);transition:transform .3s cubic-bezier(.34,1.56,.64,1),background .2s,border-color .2s,box-shadow .2s}
-    .mt-chip:hover{transform:translateY(-4px) scale(1.07) rotate(-2deg);background:rgba(142,214,176,.2);border-color:#8ED6B0;box-shadow:0 8px 22px rgba(142,214,176,.28)}
+    /* Type. Spans are left alone on purpose: Streamlit's icons are font-based spans. */
+    .stApp,.stApp p,.stApp label,.stApp li,.stApp button,.stApp input,.stApp textarea{font-family:'Figtree','Segoe UI',system-ui,-apple-system,sans-serif!important}
+    .stApp h1,.stApp h2,.stApp h3,.stApp h4,.mt-name,.mt-day,[data-testid="stMetricValue"],[data-testid="stMetricValue"] div{font-family:'Bricolage Grotesque','Figtree',system-ui,sans-serif!important;letter-spacing:-.015em}
+    h1,h2,h3,h4,h5,[data-testid="stMarkdownContainer"] p,[data-testid="stMarkdownContainer"] li,label{color:var(--mt-text)!important}
+    h2,h3{font-weight:700!important}
+    h3{font-size:1.5rem!important}
+    h4{font-size:1.18rem!important;font-weight:650!important}
+    h5{font-weight:600!important}
+    [data-testid="stCaptionContainer"],[data-testid="stCaptionContainer"] p{color:var(--mt-muted)!important}
+    hr{border:none!important;height:1px;background:var(--mt-line)!important}
 
-    /* Tabs as a pill switcher */
-    [data-baseweb="tab-list"]{gap:6px;padding:6px;overflow-x:auto;scrollbar-width:none;border-radius:18px;background:rgba(23,43,37,.72);border:1px solid var(--mt-border);backdrop-filter:blur(10px)}
+    /* Masthead */
+    .mt-masthead{display:grid;grid-template-columns:auto 1fr;align-items:end;column-gap:clamp(18px,3vw,34px);padding:.25rem 0 1.5rem;margin-bottom:1.4rem;border-bottom:1px solid var(--mt-line)}
+    .mt-day{font-weight:800;font-size:clamp(76px,11vw,118px);line-height:.78;letter-spacing:-.05em;color:var(--mt-accent);font-variation-settings:'wdth' 78}
+    .mt-daymeta{margin-top:10px;font-size:15px;line-height:1.3;color:var(--mt-muted)}
+    .mt-daymeta b{display:block;font-size:17px;font-weight:600;color:var(--mt-text)}
+    .mt-name{margin:0 0 6px;font-size:clamp(26px,3.6vw,38px);font-weight:700;line-height:1.1;color:var(--mt-text)}
+    .mt-tag{max-width:46ch;font-size:clamp(15px,1.7vw,17px);line-height:1.5;color:var(--mt-muted)}
+
+    /* Tabs */
+    [data-baseweb="tab-list"]{gap:6px;overflow-x:auto;scrollbar-width:none}
     [data-baseweb="tab-list"]::-webkit-scrollbar{display:none}
-    [data-baseweb="tab-highlight"],[data-baseweb="tab-border"]{display:none!important}
-    button[data-baseweb="tab"]{flex:1 1 auto;justify-content:center;height:auto;padding:10px 18px;white-space:nowrap;border-radius:13px;background:transparent;color:var(--mt-muted);font-weight:700;transition:all .25s var(--mt-ease)}
-    button[data-baseweb="tab"] p{color:inherit!important;font-weight:700}
-    button[data-baseweb="tab"]:hover{background:rgba(142,214,176,.13);color:#fff;transform:translateY(-1px)}
-    button[data-baseweb="tab"][aria-selected="true"]{background:linear-gradient(135deg,#8ED6B0,#B1E8C8);color:#0E1F18!important;box-shadow:0 6px 18px rgba(142,214,176,.35)}
-    button[data-baseweb="tab"][aria-selected="true"] p{color:#0E1F18!important}
-    [data-baseweb="tab-panel"]{padding-top:1.2rem;animation:mtRise .5s var(--mt-ease) both}
+    [data-baseweb="tab-border"]{background:var(--mt-line)!important;height:1px!important}
+    [data-baseweb="tab-highlight"]{background:var(--mt-accent)!important;height:3px!important}
+    button[data-baseweb="tab"]{height:auto;padding:12px 18px;white-space:nowrap;background:transparent;color:var(--mt-muted);transition:color .15s}
+    button[data-baseweb="tab"] p{color:inherit!important;font-weight:600;font-size:1rem}
+    button[data-baseweb="tab"]:hover{background:transparent;color:var(--mt-text)}
+    button[data-baseweb="tab"][aria-selected="true"]{color:var(--mt-text)}
+    [data-baseweb="tab-panel"]{padding-top:1.5rem}
 
-    /* Cards */
-    [data-testid="stForm"]{padding:1.4rem 1.4rem 1rem;border-radius:22px;background:var(--mt-glass);border:1px solid var(--mt-border)!important;backdrop-filter:blur(14px);box-shadow:0 10px 40px rgba(0,0,0,.22);transition:border-color .3s,box-shadow .3s}
-    [data-testid="stForm"]:hover{border-color:rgba(142,214,176,.5)!important;box-shadow:0 14px 48px rgba(0,0,0,.3),0 0 24px rgba(142,214,176,.12)}
-    [data-testid="stMetric"]{position:relative;overflow:hidden;padding:18px 20px;border-radius:18px;background:linear-gradient(160deg,rgba(41,72,58,.8),rgba(34,59,50,.6));border:1px solid var(--mt-border);box-shadow:0 6px 20px rgba(0,0,0,.16);transition:transform .25s var(--mt-ease),box-shadow .25s,border-color .25s}
-    [data-testid="stMetric"]::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,#8ED6B0,#F2B880,#A9A4D8)}
-    [data-testid="stMetric"]:hover{transform:translateY(-4px);border-color:#8ED6B0;box-shadow:0 16px 34px rgba(0,0,0,.3),0 0 22px var(--mt-glow)}
-    [data-testid="stMetricValue"]{color:#8ED6B0!important;font-weight:800}
+    /* Surfaces */
+    [data-testid="stForm"]{padding:1.5rem 1.5rem 1.1rem;border-radius:12px;background:var(--mt-surface);border:1px solid var(--mt-line)!important}
+    [data-testid="stMetric"]{padding:2px 0 2px 16px;border-left:3px solid var(--mt-accent)}
+    [data-testid="stMetricValue"]{font-size:2.1rem;font-weight:700;color:var(--mt-text)!important}
     [data-testid="stMetricValue"] > div{white-space:normal!important;overflow-wrap:anywhere}
-    [data-testid="stPlotlyChart"]{padding:10px 8px 4px;overflow:hidden;border-radius:20px;background:var(--mt-glass);border:1px solid var(--mt-border);backdrop-filter:blur(8px);box-shadow:0 8px 26px rgba(0,0,0,.18);transition:transform .25s var(--mt-ease),box-shadow .25s,border-color .25s}
-    [data-testid="stPlotlyChart"]:hover{transform:translateY(-3px);border-color:rgba(142,214,176,.55);box-shadow:0 16px 36px rgba(0,0,0,.3),0 0 22px rgba(142,214,176,.18)}
+    [data-testid="stMetricLabel"]{color:var(--mt-muted)!important}
+    [data-testid="stPlotlyChart"]{padding:14px 10px 6px;overflow:hidden;border-radius:12px;background:var(--mt-surface)}
     .js-plotly-plot .main-svg,.js-plotly-plot .svg-container{background:transparent!important}
-    .js-plotly-plot .plotly .bg{fill:transparent!important}
-    .js-plotly-plot .plotly .gtitle,.js-plotly-plot .plotly .xtitle,.js-plotly-plot .plotly .ytitle,.js-plotly-plot .plotly .xtick text,.js-plotly-plot .plotly .ytick text,.js-plotly-plot .plotly .legendtext{fill:#DCE8E0!important}
-    .js-plotly-plot .plotly .gridlayer path,.js-plotly-plot .plotly .zerolinelayer path{stroke:rgba(180,199,188,.16)!important}
-    [data-testid="stDataFrame"]{overflow:hidden;border-radius:16px;border:1px solid var(--mt-border);box-shadow:0 6px 20px rgba(0,0,0,.16);transition:border-color .25s,box-shadow .25s}
-    [data-testid="stDataFrame"]:hover{border-color:rgba(142,214,176,.5);box-shadow:0 10px 28px rgba(0,0,0,.26)}
+    [data-testid="stDataFrame"]{overflow:hidden;border-radius:10px;border:1px solid var(--mt-line)}
     [data-testid="stExpander"]{background:transparent;border:none!important}
-    [data-testid="stExpander"] details{overflow:hidden;border-radius:16px;background:var(--mt-glass);border:1px solid var(--mt-border)!important;transition:border-color .25s,box-shadow .25s}
-    [data-testid="stExpander"] details:hover{border-color:rgba(142,214,176,.5)!important;box-shadow:0 8px 24px rgba(0,0,0,.2)}
-    [data-testid="stExpander"] summary{padding:.85rem 1rem;font-weight:650;transition:background .2s}
-    [data-testid="stExpander"] summary:hover{background:rgba(142,214,176,.10)}
-    [data-testid="stExpander"] summary:hover p{color:#8ED6B0!important}
-    [data-testid="stAlert"]{border-radius:16px;border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(6px);box-shadow:0 6px 22px rgba(0,0,0,.18);animation:mtRise .4s var(--mt-ease) both;transition:transform .2s}
-    [data-testid="stAlert"]:hover{transform:translateY(-2px)}
+    [data-testid="stExpander"] details{overflow:hidden;border-radius:10px;background:transparent;border:1px solid var(--mt-line)!important}
+    [data-testid="stExpander"] summary{padding:.8rem 1rem;font-weight:600}
+    [data-testid="stExpander"] summary:hover{background:rgba(248,250,252,.04)}
+    [data-testid="stAlert"]{border-radius:8px;border-left:3px solid var(--mt-muted)}
+    [data-testid="stAlert"]:has([data-testid="stAlertContentInfo"]){border-left-color:#3B82F6}
+    [data-testid="stAlert"]:has([data-testid="stAlertContentSuccess"]){border-left-color:var(--mt-sage)}
+    [data-testid="stAlert"]:has([data-testid="stAlertContentWarning"]){border-left-color:#F59E0B}
+    [data-testid="stAlert"]:has([data-testid="stAlertContentError"]){border-left-color:var(--mt-rose)}
 
     /* Buttons */
-    .stButton>button,.stDownloadButton>button,[data-testid="stFormSubmitButton"]>button{position:relative;overflow:hidden;min-height:46px;padding:.6rem 1.1rem;border-radius:14px;border:1px solid #557966;background:linear-gradient(180deg,#2F5242,#29483A);color:#F0F4EC;font-weight:700;transition:transform .2s var(--mt-ease),box-shadow .2s,border-color .2s,background .2s}
-    .stButton>button::after,.stDownloadButton>button::after,[data-testid="stFormSubmitButton"]>button::after{content:"";position:absolute;top:0;left:-120%;width:60%;height:100%;pointer-events:none;background:linear-gradient(120deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-20deg);transition:left .6s ease}
-    .stButton>button:hover,.stDownloadButton>button:hover,[data-testid="stFormSubmitButton"]>button:hover{background:linear-gradient(180deg,#3B6350,#365B48);border-color:#8ED6B0;color:#fff;transform:translateY(-2px);box-shadow:0 10px 24px rgba(0,0,0,.28),0 0 18px rgba(142,214,176,.22)}
-    .stButton>button:hover::after,.stDownloadButton>button:hover::after,[data-testid="stFormSubmitButton"]>button:hover::after{left:140%}
-    .stButton>button:active,.stDownloadButton>button:active,[data-testid="stFormSubmitButton"]>button:active{transform:translateY(0) scale(.97)}
-    [data-testid^="stBaseButton-primary"],button[kind^="primary"]{background:linear-gradient(135deg,#8ED6B0,#B1E8C8)!important;border:none!important;box-shadow:0 8px 22px rgba(142,214,176,.28)}
-    [data-testid^="stBaseButton-primary"] p,button[kind^="primary"] p{color:#0E1F18!important;font-weight:800}
-    [data-testid^="stBaseButton-primary"]:hover,button[kind^="primary"]:hover{box-shadow:0 12px 30px rgba(142,214,176,.5)!important}
-    button:focus-visible,[role="slider"]:focus-visible{outline:3px solid rgba(142,214,176,.55)!important;outline-offset:2px}
+    .stButton>button,.stDownloadButton>button,[data-testid="stFormSubmitButton"]>button{
+      min-height:42px;padding:.5rem 1.1rem;border-radius:8px;border:1px solid var(--mt-line);
+      background:transparent;color:var(--mt-text);font-weight:600;
+      transition: all .2s ease-in-out;
+    }
+    .stButton>button:hover,.stDownloadButton>button:hover,[data-testid="stFormSubmitButton"]>button:hover{
+      background:rgba(248,250,252,.07);border-color:var(--mt-muted);color:var(--mt-text);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(59,130,246,.15);
+    }
+    .stButton>button:active,.stDownloadButton>button:active,[data-testid="stFormSubmitButton"]>button:active{transform:translateY(1px)}
+    [data-testid^="stBaseButton-primary"],button[kind^="primary"]{background:var(--mt-accent)!important;border:1px solid var(--mt-accent)!important}
+    [data-testid^="stBaseButton-primary"] p,button[kind^="primary"] p{color:var(--mt-on-accent)!important;font-weight:700}
+    [data-testid^="stBaseButton-primary"]:hover,button[kind^="primary"]:hover{background:var(--mt-accent-hover)!important;border-color:var(--mt-accent-hover)!important}
+    button:focus-visible,[role="slider"]:focus-visible{outline:2px solid var(--mt-accent)!important;outline-offset:2px}
 
     /* Inputs */
-    input,textarea,[data-baseweb="select"]>div,[data-baseweb="base-input"]{background-color:#223B32!important;color:#F0F4EC!important;border-color:#557966!important;border-radius:10px!important;transition:border-color .2s,box-shadow .2s}
-    [data-baseweb="select"]>div:hover,[data-baseweb="input"]:hover,[data-baseweb="textarea"]:hover{border-color:#8ED6B0!important}
-    [data-baseweb="select"]>div:focus-within,[data-baseweb="input"]:focus-within,[data-baseweb="textarea"]:focus-within{border-color:#8ED6B0!important;box-shadow:0 0 0 3px rgba(142,214,176,.22)!important}
-    [data-baseweb="popover"],[data-baseweb="menu"],[role="listbox"]{background:#223B32!important;color:#F0F4EC!important;border-radius:12px!important}
-    [role="option"]{transition:background .15s}
-    [role="option"]:hover{background:rgba(142,214,176,.18)!important}
-    [data-testid="stSlider"] [role="slider"]{background:#8ED6B0!important;box-shadow:0 0 0 4px rgba(142,214,176,.25);transition:box-shadow .2s}
-    [data-testid="stSlider"] [role="slider"]:hover{box-shadow:0 0 0 9px rgba(142,214,176,.25)}
-    [data-testid="stSliderThumbValue"]{color:#8ED6B0!important;font-weight:800}
+    input,textarea,[data-baseweb="select"]>div,[data-baseweb="base-input"]{background-color:var(--mt-field)!important;color:var(--mt-text)!important;border-color:var(--mt-line)!important;border-radius:8px!important}
+    [data-baseweb="select"]>div:hover,[data-baseweb="input"]:hover,[data-baseweb="textarea"]:hover{border-color:var(--mt-muted)!important}
+    [data-baseweb="select"]>div:focus-within,[data-baseweb="input"]:focus-within,[data-baseweb="textarea"]:focus-within{border-color:var(--mt-accent)!important;box-shadow:0 0 0 2px rgba(59,130,246,.22)!important}
+    [data-baseweb="popover"],[data-baseweb="menu"],[role="listbox"]{background:var(--mt-surface)!important;color:var(--mt-text)!important;border-radius:8px!important}
+    [role="option"]:hover{background:rgba(59,130,246,.14)!important}
+    [data-testid="stSlider"] [role="slider"]{background:var(--mt-accent)!important}
+    [data-testid="stSliderThumbValue"]{color:var(--mt-accent)!important;font-weight:700}
 
     /* Chat */
-    [data-testid="stChatMessage"]{margin-bottom:.6rem;padding:1rem 1.1rem;border-radius:18px;background:var(--mt-glass);border:1px solid var(--mt-border);backdrop-filter:blur(8px);animation:mtRise .4s var(--mt-ease) both;transition:border-color .2s,transform .2s}
-    [data-testid="stChatMessage"]:hover{border-color:rgba(142,214,176,.5);transform:translateX(3px)}
-    [data-testid="stChatMessage"][aria-label*="user"]{background:linear-gradient(135deg,rgba(169,164,216,.18),rgba(34,59,50,.6));border-color:rgba(169,164,216,.38)}
-    [data-testid="stChatMessage"][aria-label*="assistant"]{background:linear-gradient(135deg,rgba(142,214,176,.15),rgba(34,59,50,.6))}
-    [data-testid="stChatMessage"] [data-testid="stMarkdownContainer"] p{color:#F0F4EC!important}
-    [data-testid="stBottom"]>div{background:linear-gradient(to top,#15281F 60%,rgba(21,40,31,0))!important}
-    [data-testid="stChatInput"]{border-radius:18px;border:1px solid #557966;background:#223B32;box-shadow:0 8px 30px rgba(0,0,0,.25);transition:border-color .2s,box-shadow .2s}
-    [data-testid="stChatInput"]:focus-within{border-color:#8ED6B0;box-shadow:0 0 0 3px rgba(142,214,176,.22),0 10px 34px rgba(0,0,0,.3)}
+    [data-testid="stChatMessage"]{margin-bottom:.6rem;padding:1rem 1.2rem;border-radius:12px;background:var(--mt-surface);border:1px solid var(--mt-line);border-left:3px solid var(--mt-sage)}
+    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]),[data-testid="stChatMessage"][aria-label*="user"]{background:var(--mt-field);border-left-color:var(--mt-accent)}
+    [data-testid="stBottom"]>div{background:var(--mt-bg)!important}
+    [data-testid="stChatInput"]{border-radius:10px;border:1px solid var(--mt-line);background:var(--mt-field)}
+    [data-testid="stChatInput"]:focus-within{border-color:var(--mt-accent);box-shadow:0 0 0 2px rgba(59,130,246,.22)}
     [data-testid="stChatInput"] textarea,[data-testid="stChatInput"] [data-baseweb="base-input"]{background-color:transparent!important;border:none!important}
-    [data-testid="stChatInputSubmitButton"]{background:#8ED6B0!important;color:#0E1F18!important;border-radius:12px;transition:transform .2s}
-    [data-testid="stChatInputSubmitButton"]:hover{transform:scale(1.1)}
-    [data-testid="stSpinner"] p{color:var(--mt-primary-dark)!important}
+    [data-testid="stChatInputSubmitButton"]{background:var(--mt-accent)!important;color:var(--mt-on-accent)!important;border-radius:8px}
+    [data-testid="stSpinner"] p{color:var(--mt-muted)!important}
 
     /* Responsive */
     @media (max-width:1024px){.block-container{padding-left:1.4rem!important;padding-right:1.4rem!important}}
@@ -185,60 +195,83 @@ st.markdown(
     }
     @media (max-width:768px){
     .block-container{padding:1rem .8rem 5rem!important}
-    button[data-baseweb="tab"]{padding:8px 12px;font-size:.84rem}
-    [data-testid="stForm"]{padding:1rem .9rem .6rem;border-radius:18px}
-    .mt-hero{border-radius:20px}
-    .mt-affirm{min-height:3.2em}
-    .mt-chip{font-size:13px;padding:7px 12px}
+    button[data-baseweb="tab"]{padding:10px 12px;font-size:.84rem}
+    [data-testid="stForm"]{padding:1rem .9rem .6rem}
+    }
+    @media (max-width:640px){
+    .mt-masthead{grid-template-columns:1fr;row-gap:14px}
     }
     @media (max-width:480px){
-    [data-testid="stMetric"]{padding:14px}
-    [data-testid="stMetricValue"]{font-size:1.4rem!important}
-    .mt-eyebrow{font-size:10px;letter-spacing:.1em}
-    .mt-leaf{opacity:.45}
+    [data-testid="stMetricValue"]{font-size:1.5rem!important}
     }
-    @media (hover:none){[data-testid="stMetric"]:hover,[data-testid="stPlotlyChart"]:hover,[data-testid="stChatMessage"]:hover{transform:none}}
-    @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+    @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-px.defaults.template = "plotly_dark"
-px.defaults.color_discrete_sequence = [
-    "#8ED6B0",
-    "#F2B880",
-    "#A9A4D8",
-    "#E58F91",
-    "#77A9D1",
-    "#B4C987",
-    "#76B7A0",
+# New vibrant, colorful palette for charts
+CHART_COLORS = [
+    "#3B82F6", # Bright Blue
+    "#8B5CF6", # Purple
+    "#EC4899", # Pink
+    "#F59E0B", # Amber
+    "#10B981", # Emerald
+    "#06B6D4", # Cyan
+    "#F43F5E", # Rose
 ]
 
+_chart_template = go.layout.Template(pio.templates["plotly_dark"])
+_chart_template.layout.update(
+    paper_bgcolor="rgba(0,0,0,0)",
+    plot_bgcolor="rgba(0,0,0,0)",
+    colorway=CHART_COLORS,
+    font=dict(family="Figtree, system-ui, sans-serif", color="#F8FAFC", size=13),
+    title=dict(
+        font=dict(
+            family="Bricolage Grotesque, Figtree, sans-serif",
+            size=18,
+            color="#F8FAFC",
+        )
+    ),
+    xaxis=dict(
+        gridcolor="rgba(148,163,184,.14)",
+        zerolinecolor="rgba(148,163,184,.14)",
+        linecolor="#334155",
+    ),
+    yaxis=dict(
+        gridcolor="rgba(148,163,184,.14)",
+        zerolinecolor="rgba(148,163,184,.14)",
+        linecolor="#334155",
+    ),
+    hoverlabel=dict(
+        bgcolor="#1E293B",
+        bordercolor="#334155",
+        font=dict(family="Figtree, system-ui, sans-serif", color="#F8FAFC"),
+    ),
+)
+px.defaults.template = _chart_template
+px.defaults.color_discrete_sequence = CHART_COLORS
+
+_today = date.today()
 st.markdown(
-    """
-    <div class="mt-hero">
-      <div class="mt-leaf" aria-hidden="true">🌿</div>
-      <span class="mt-eyebrow"><span class="mt-dot"></span>Your personal wellness space</span>
-      <div class="mt-title" role="heading" aria-level="1">MindTrack AI</div>
-      <div class="mt-sub">Pause. Reflect. Understand yourself a little better.</div>
-      <div class="mt-affirm">
-        <span>🌱 Small steps still move you forward.</span>
-        <span>🫶 Whatever you feel today is allowed.</span>
-        <span>🌤️ Check in with yourself, gently.</span>
+    f"""
+    <header class="mt-masthead">
+      <div>
+        <div class="mt-day" aria-hidden="true">{_today.day}</div>
+        <div class="mt-daymeta"><b>{_today.strftime("%A")}</b>{_today.strftime("%B %Y")}</div>
       </div>
-      <div class="mt-chips">
-        <span class="mt-chip" title="Log your mood in under a minute">🌤️ Daily check-in</span>
-        <span class="mt-chip" title="Talk things through any time">💬 AI companion</span>
-        <span class="mt-chip" title="See your patterns over time">📊 Mood insights</span>
+      <div>
+        <div class="mt-name" role="heading" aria-level="1">MindTrack AI</div>
+        <div class="mt-tag">Log how you feel, talk it through, and see how your weeks add up.</div>
       </div>
-    </div>
+    </header>
     """,
     unsafe_allow_html=True,
 )
 
 st.info(
-    "💚 MindTrack AI is a wellness companion, not a diagnostic tool "
+    "MindTrack AI is a wellness companion, not a diagnostic tool "
     "or a replacement for professional mental healthcare."
 )
 
@@ -248,13 +281,13 @@ if "authenticated_user" not in st.session_state:
 
 # If not authenticated, display login & registration
 if st.session_state.authenticated_user is None:
-    st.markdown("### 🔐 Welcome to MindTrack AI")
+    st.markdown("### Sign in or create an account")
     st.caption(
-        "Please sign in or create an account to securely access your personal mood check-ins and AI companion."
+        "Sign in to pick up your check-ins and chats, or create an account to get started."
     )
 
     auth_tab_login, auth_tab_register, auth_tab_forgot = st.tabs(
-        ["🔑 Sign In", "✨ Create Account", "❓ Forgot Password"]
+        ["Sign in", "Create account", "Forgot password"]
     )
 
     with auth_tab_login, st.form("login_form"):
@@ -263,21 +296,21 @@ if st.session_state.authenticated_user is None:
             "Password", type="password", key="login_password_input"
         )
         login_submitted = st.form_submit_button(
-            "🔑 Sign In", type="primary", width="stretch"
+            "Sign in", type="primary", width="stretch"
         )
 
         if login_submitted:
             user_obj, err = authenticate_user(login_username, login_password)
             if user_obj:
                 st.session_state.authenticated_user = user_obj
-                st.success(f"Welcome back, {user_obj['username']}! 🌿")
+                st.toast(f"👋 Welcome back, {user_obj['username']}.")
                 st.rerun()
             else:
                 st.error(err or "Invalid username or password.")
 
     with auth_tab_login:
         st.caption(
-            "🔒 **Forgot your password?** Switch to the **❓ Forgot Password** tab above to recover your account using your security question or emergency recovery key."
+            "**Forgot your password?** Open the **Forgot password** tab above to recover your account with your security question or emergency recovery key."
         )
 
     with auth_tab_register:
@@ -299,9 +332,9 @@ if st.session_state.authenticated_user is None:
                 key="reg_confirm_input",
             )
 
-            st.markdown("##### 🛡️ Account Recovery Configuration")
+            st.markdown("##### Account recovery")
             reg_sec_q_select = st.selectbox(
-                "Select a Security Question",
+                "Select a security question",
                 options=DEFAULT_SECURITY_QUESTIONS + ["Custom question..."],
                 key="reg_sec_q_select",
                 help="You will be asked this question if you ever forget your password.",
@@ -315,13 +348,13 @@ if st.session_state.authenticated_user is None:
                 ).strip()
 
             reg_sec_a = st.text_input(
-                "Security Answer",
+                "Security answer",
                 key="reg_sec_a_input",
                 help="Answers are stored securely as cryptographic hashes and verified case-insensitively.",
             ).strip()
 
             reg_submitted = st.form_submit_button(
-                "✨ Create Account", type="primary", width="stretch"
+                "Create account", type="primary", width="stretch"
             )
 
             if reg_submitted:
@@ -346,19 +379,19 @@ if st.session_state.authenticated_user is None:
                                 "recovery_key"
                             ]
                         st.success(
-                            f"Account created successfully! Welcome, {user_obj['username']}! 🌿"
+                            f"Account created successfully! Welcome, {user_obj['username']}!"
                         )
                         st.rerun()
                     else:
                         st.error(err or "Registration failed.")
 
     with auth_tab_forgot:
-        st.markdown("#### ❓ Reset Forgotten Password")
+        st.markdown("#### Reset your password")
         st.caption(
             "Recover access to your account using your security question or single-use emergency recovery key."
         )
 
-        with st.expander("🔍 Look up your security question"):
+        with st.expander("Look up your security question"):
             lookup_user = st.text_input(
                 "Enter your username to view your configured question:",
                 key="lookup_username_input",
@@ -368,7 +401,7 @@ if st.session_state.authenticated_user is None:
                     q_found, q_err = get_security_question(lookup_user)
                     if q_found:
                         st.info(
-                            f"**Security Question for `{lookup_user}`:**\n\n💬 *{q_found}*"
+                            f"**Security question for `{lookup_user}`:**\n\n*{q_found}*"
                         )
                     else:
                         st.error(q_err or "Could not find a security question.")
@@ -377,7 +410,7 @@ if st.session_state.authenticated_user is None:
 
         recovery_method = st.radio(
             "Choose verification method:",
-            options=["🛡️ Security Question", "🔑 Emergency Recovery Key"],
+            options=["Security question", "Emergency recovery key"],
             horizontal=True,
             key="forgot_recovery_method",
         )
@@ -389,9 +422,9 @@ if st.session_state.authenticated_user is None:
                 placeholder="Enter your username",
             ).strip()
 
-            if recovery_method == "🛡️ Security Question":
+            if recovery_method == "Security question":
                 forgot_sec_answer = st.text_input(
-                    "Security Answer",
+                    "Security answer",
                     key="forgot_sec_answer_input",
                     placeholder="Enter the answer to your security question",
                     help="Verification is case-insensitive.",
@@ -400,26 +433,26 @@ if st.session_state.authenticated_user is None:
             else:
                 forgot_sec_answer = ""
                 forgot_recovery_key = st.text_input(
-                    "Emergency Recovery Key",
+                    "Emergency recovery key",
                     key="forgot_recovery_key_input",
                     placeholder="MT-XXXX-XXXX-XXXX",
                     help="Enter the 16-character emergency recovery key.",
                 ).strip()
 
             forgot_new_pass = st.text_input(
-                "New Password",
+                "New password",
                 type="password",
                 key="forgot_new_pass_input",
                 help="At least 8 characters.",
             )
             forgot_confirm_pass = st.text_input(
-                "Confirm New Password",
+                "Confirm new password",
                 type="password",
                 key="forgot_confirm_pass_input",
             )
 
             forgot_submit = st.form_submit_button(
-                "🔄 Reset Password",
+                "Reset password",
                 type="primary",
                 width="stretch",
             )
@@ -429,7 +462,7 @@ if st.session_state.authenticated_user is None:
                     st.error("Please enter your username.")
                 elif forgot_new_pass != forgot_confirm_pass:
                     st.error("New passwords do not match.")
-                elif recovery_method == "🛡️ Security Question":
+                elif recovery_method == "Security question":
                     if not forgot_sec_answer:
                         st.error(
                             "Please enter the answer to your security question."
@@ -440,24 +473,24 @@ if st.session_state.authenticated_user is None:
                         )
                         if ok:
                             st.success(
-                                "🎉 Password reset successfully! You can now switch to the **🔑 Sign In** tab and log in."
+                                "Password reset successfully. Switch to the **Sign in** tab to log in."
                             )
                         else:
                             st.error(err_msg or "Password reset failed.")
                 else:
                     if not forgot_recovery_key:
-                        st.error("Please enter your Emergency Recovery Key.")
+                        st.error("Please enter your emergency recovery key.")
                     else:
                         ok, err_msg, new_key = reset_password_with_recovery_key(
                             forgot_user, forgot_recovery_key, forgot_new_pass
                         )
                         if ok:
                             st.success(
-                                "🎉 Password reset successfully! You can now switch to the **🔑 Sign In** tab and log in."
+                                "Password reset successfully. Switch to the **Sign in** tab to log in."
                             )
                             if new_key:
                                 st.info(
-                                    f"🔑 **Your new single-use Recovery Key is:** `{new_key}`\n\n"
+                                    f"**Your new single-use recovery key is:** `{new_key}`\n\n"
                                     "Please write this code down and store it in a secure location."
                                 )
                         else:
@@ -466,7 +499,7 @@ if st.session_state.authenticated_user is None:
     # Notice for safe migration of existing data
     st.markdown("---")
     st.info(
-        "💡 **Notice for existing users:** If you previously had saved check-ins or conversations before user accounts, "
+        "**Notice for existing users:** If you previously had saved check-ins or conversations before user accounts, "
         "your data has been safely preserved under the account **`mindtrack_user`** (Default password: **`MindTrack2026!`**).\n\n"
         "If you ever forget your password, the default security question for legacy accounts is: "
         "**'What is the name of this wellness companion?'** (Answer: **`MindTrack`**)."
@@ -482,21 +515,29 @@ if current_user is None:
 
 # Sidebar user account controls
 with st.sidebar:
-    st.markdown(f"### 🌿 **{current_user['username']}**")
+    current_hour = datetime.now().hour
+    if current_hour < 12:
+        greeting = "Good morning"
+    elif current_hour < 18:
+        greeting = "Good afternoon"
+    else:
+        greeting = "Good evening"
+
+    st.markdown(f"### {greeting}, {current_user['username']} 👋")
     st.caption("Your private wellness space")
 
     # Display newly generated emergency recovery key alert if present
     if "new_recovery_key" in st.session_state:
         rec_key = st.session_state["new_recovery_key"]
         st.warning(
-            f"🔑 **Emergency Recovery Key:** `{rec_key}`\n\n"
+            f"**Emergency recovery key:** `{rec_key}`\n\n"
             "Please copy and store this key safely. You can use it to reset your password if you ever forget it."
         )
         if st.button("I have saved my key", key="dismiss_recovery_key_btn"):
             st.session_state.pop("new_recovery_key", None)
             st.rerun()
 
-    if st.button("🚪 Sign Out", key="sign_out_button", width="stretch"):
+    if st.button("Sign out", key="sign_out_button", width="stretch"):
         st.session_state.authenticated_user = None
         st.session_state.pop("active_conversation_id", None)
         st.session_state.pop("conversation_selector", None)
@@ -504,13 +545,13 @@ with st.sidebar:
         st.session_state.pop("new_recovery_key", None)
         st.rerun()
 
-    with st.expander("🔒 Change Password"):
+    with st.expander("Change password"):
         with st.form("change_pw_form", clear_on_submit=True):
             curr_pass = st.text_input("Current password", type="password")
             new_pass = st.text_input("New password (min 8 chars)", type="password")
             confirm_new_pass = st.text_input("Confirm new password", type="password")
             pw_change_submitted = st.form_submit_button(
-                "Update Password", width="stretch"
+                "Update password", width="stretch"
             )
 
             if pw_change_submitted:
@@ -521,16 +562,16 @@ with st.sidebar:
                         current_user["id"], curr_pass, new_pass
                     )
                     if ok:
-                        st.success("Password updated successfully!")
+                        st.toast("✅ Password updated successfully!")
                     else:
                         st.error(change_err or "Failed to change password.")
 
-    with st.expander("🛡️ Security Question & Recovery Key"):
+    with st.expander("Security question and recovery key"):
         st.caption(
             "Configure how you recover your account if you forget your password."
         )
         with st.form("update_sec_q_form", clear_on_submit=True):
-            st.markdown("**Update Security Question**")
+            st.markdown("**Update security question**")
             curr_pw_sec = st.text_input(
                 "Current password", type="password", key="sec_curr_pw"
             )
@@ -549,7 +590,7 @@ with st.sidebar:
                 "New security answer", key="sidebar_sec_a"
             ).strip()
             submit_sec_q = st.form_submit_button(
-                "Save Recovery Question", width="stretch"
+                "Save recovery question", width="stretch"
             )
 
             if submit_sec_q:
@@ -562,18 +603,18 @@ with st.sidebar:
                     current_user["id"], curr_pw_sec, chosen_q, new_sec_a
                 )
                 if ok:
-                    st.success("Security question updated successfully!")
+                    st.toast("✅ Security question updated successfully!")
                 else:
                     st.error(err or "Failed to update security question.")
 
         with st.form("regen_rec_key_form", clear_on_submit=True):
-            st.markdown("**Regenerate Recovery Key**")
+            st.markdown("**Regenerate recovery key**")
             st.caption("Generates a new single-use 16-character recovery key.")
             curr_pw_rec = st.text_input(
                 "Current password", type="password", key="rec_curr_pw"
             )
             submit_rec_key = st.form_submit_button(
-                "Generate New Recovery Key", width="stretch"
+                "Generate new recovery key", width="stretch"
             )
 
             if submit_rec_key:
@@ -581,14 +622,14 @@ with st.sidebar:
                     current_user["id"], curr_pw_rec
                 )
                 if new_k:
-                    st.success("New Emergency Recovery Key generated!")
-                    st.info(f"🔑 **`{new_k}`**\nPlease copy and store this safely.")
+                    st.toast("🔑 New emergency recovery key generated.")
+                    st.info(f"**`{new_k}`**\nPlease copy and store this safely.")
                 else:
                     st.error(err or "Failed to generate recovery key.")
 
 # Application tabs
 checkin_tab, chat_tab, dashboard_tab = st.tabs(
-    ["🌤️ Daily Check-in", "💬 AI Companion", "📊 Mood Insights"]
+    ["Daily check-in", "AI companion", "Mood insights"]
 )
 
 # ==================================================
@@ -596,7 +637,7 @@ checkin_tab, chat_tab, dashboard_tab = st.tabs(
 # ==================================================
 
 with checkin_tab:
-    st.subheader("🌤️ How are you feeling today?")
+    st.subheader("How are you feeling today?")
     st.caption("Take a quiet moment. There are no right or wrong answers.")
 
     with st.form("mood_checkin", clear_on_submit=True):
@@ -616,14 +657,14 @@ with checkin_tab:
         }
 
         mood = st.selectbox(
-            "✨ Choose the mood that best describes how you feel",
+            "Choose the mood that best describes how you feel",
             options=list(mood_emojis.keys()),
             format_func=lambda value: f"{mood_emojis[value]}  {value}",
             help="Choose the mood that feels closest to your experience.",
         )
 
         intensity = st.slider(
-            "💚 How intense is this feeling?",
+            "How intense is this feeling?",
             min_value=1,
             max_value=5,
             value=3,
@@ -653,7 +694,7 @@ with checkin_tab:
         )
 
         submitted = st.form_submit_button(
-            "💾 Save check-in",
+            "Save check-in",
             type="primary",
         )
 
@@ -668,18 +709,16 @@ with checkin_tab:
                     note=note,
                 )
 
-            st.success(
-                f"Check-in saved successfully. Entry ID: {entry_id}"
-            )
+            st.toast("🌿 Check-in saved successfully!")
 
         except ValueError as exc:
-            st.error(str(exc))
+            st.toast(f"⚠️ {str(exc)}")
 
         except Exception:
             logger.exception("Failed to save mood check-in.")
-            st.error("The check-in could not be saved. Please try again.")
+            st.toast("⚠️ The check-in could not be saved. Please try again.")
 
-    st.subheader("🕰️ Recent check-ins")
+    st.subheader("Recent check-ins")
 
     with st.spinner("Loading your saved mood check-ins..."):
         entries = get_mood_entries(user_id=current_user["id"])
@@ -699,7 +738,7 @@ with checkin_tab:
             width="stretch",
         )
 
-        with st.expander("🗑️ Delete a check-in"):
+        with st.expander("Delete a check-in"):
             entry_options = {
                 f"#{entry['id']} · {entry['date']} · {entry['mood']}":
                 entry["id"]
@@ -711,7 +750,7 @@ with checkin_tab:
                 options=list(entry_options.keys()),
             )
 
-            if st.button("🗑️ Delete selected entry"):
+            if st.button("Delete selected entry"):
                 try:
                     with st.spinner("Deleting check-in..."):
                         deleted = delete_mood_entry(
@@ -720,25 +759,33 @@ with checkin_tab:
                         )
 
                     if deleted:
-                        st.success("Check-in deleted.")
+                        st.toast("🗑️ Check-in deleted.")
                         st.rerun()
                     else:
-                        st.warning("That entry no longer exists.")
+                        st.toast("⚠️ That entry no longer exists.")
 
                 except Exception:
                     logger.exception("Failed to delete mood check-in.")
-                    st.error("Could not delete the selected check-in.")
+                    st.toast("⚠️ Could not delete the selected check-in.")
 
     else:
-        st.info("🌱 Your saved check-ins will appear here.")
+        st.markdown(
+            """
+            <div style="text-align: center; padding: 3rem 1rem; opacity: 0.7;">
+                <h3 style="margin-bottom: 0.5rem;">🌱 It's quiet in here</h3>
+                <p>You haven't logged any check-ins yet. Take a moment to reflect on your day and add your first entry above.</p>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
 
 
-    # ==================================================
+# ==================================================
 # Persistent AI Chatbot
 # ==================================================
 
 with chat_tab:
-    st.subheader("💬 Your AI wellness companion")
+    st.subheader("Your AI wellness companion")
 
     st.caption(
         "Share what's on your mind. You can skip any question "
@@ -789,7 +836,7 @@ with chat_tab:
     col_new, col_delete = st.columns(2)
 
     with col_new:
-        if st.button("✨ New conversation", width="stretch"):
+        if st.button("New conversation", width="stretch"):
             try:
                 with st.spinner("Creating a new conversation..."):
                     new_id = create_conversation(user_id=current_user["id"])
@@ -800,10 +847,10 @@ with chat_tab:
 
             except Exception:
                 logger.exception("Failed to create conversation.")
-                st.error("Could not create a new conversation.")
+                st.toast("⚠️ Could not create a new conversation.")
 
     with col_delete:
-        if st.button("🗑️ Delete current chat", width="stretch"):
+        if st.button("Delete current chat", width="stretch"):
             try:
                 current_id = st.session_state.active_conversation_id
 
@@ -825,17 +872,15 @@ with chat_tab:
                     )
 
                     st.session_state.pop("conversation_selector", None)
-                    st.session_state["chat_notice"] = (
-                        "The selected conversation was deleted."
-                    )
+                    st.toast("🗑️ Conversation deleted.")
                     st.rerun()
 
                 else:
-                    st.warning("The conversation no longer exists.")
+                    st.toast("⚠️ The conversation no longer exists.")
 
             except Exception:
                 logger.exception("Failed to delete conversation.")
-                st.error("Could not delete this conversation.")
+                st.toast("⚠️ Could not delete this conversation.")
 
     # Refresh conversation list.
     with st.spinner("Refreshing conversation list..."):
@@ -884,15 +929,15 @@ with chat_tab:
         if not messages:
             st.markdown(
                 """
-                ### 🌱 Welcome to your wellness space
+                ### Welcome to your wellness space
 
                 Talk about your day, reflect on your mood, or explore
                 simple everyday wellness strategies.
 
                 **Not sure where to start?**
-                - 🌤️ Managing a stressful day
-                - 📝 Reflecting on your emotions
-                - 🌿 Building a calming routine
+                - Managing a stressful day
+                - Reflecting on your emotions
+                - Building a calming routine
 
                 What has been on your mind lately?
                 """
@@ -900,9 +945,9 @@ with chat_tab:
 
         for message in messages:
             avatar = (
-                "🌿"
+                ":material/spa:"
                 if message["role"] == "assistant"
-                else "🙂"
+                else ":material/person:"
             )
 
             with st.chat_message(message["role"], avatar=avatar):
@@ -999,12 +1044,12 @@ with chat_tab:
             st.rerun()
 
 
-    # ==================================================
+# ==================================================
 # Mood Dashboard and Advanced Analytics
 # ==================================================
 
 with dashboard_tab:
-    st.subheader("📊 Advanced Mood Analytics")
+    st.subheader("Mood analytics")
 
     st.caption(
         "Explore your recorded mood patterns and intensity over time. "
@@ -1015,9 +1060,14 @@ with dashboard_tab:
         entries = get_mood_entries(user_id=current_user["id"])
 
     if not entries:
-        st.info(
-            "No mood entries yet. Save a Daily Check-in to start "
-            "building your personal mood dashboard."
+        st.markdown(
+            """
+            <div style="text-align: center; padding: 3rem 1rem; opacity: 0.7;">
+                <h3 style="margin-bottom: 0.5rem;">📊 Data is gathering</h3>
+                <p>No mood entries yet. Save a check-in in the Daily check-in tab to start building your personal mood dashboard.</p>
+            </div>
+            """, 
+            unsafe_allow_html=True
         )
 
     else:
@@ -1062,7 +1112,7 @@ with dashboard_tab:
                     max_date = df["date"].max().date()
 
                     # Date range filters.
-                    st.markdown("### 🗓️ Date range")
+                    st.markdown("### Date range")
 
                     period = st.selectbox(
                         "Choose an analysis period",
@@ -1172,6 +1222,8 @@ with dashboard_tab:
                         metric2.metric(
                             "Average intensity",
                             f"{average_intensity:.1f}/5",
+                            delta="relative to overall average",
+                            delta_color="inverse"
                         )
 
                         metric3.metric(
@@ -1187,7 +1239,7 @@ with dashboard_tab:
                         st.divider()
 
                         # Advanced trend analysis.
-                        st.subheader("📈 Advanced Mood Trend Analysis")
+                        st.subheader("Mood trend analysis")
 
                         st.caption(
                             "Explore changes in recorded intensity and "
@@ -1311,14 +1363,14 @@ with dashboard_tab:
                                         key="weekday_intensity_chart",
                                     )
 
-                            st.markdown("#### 💡 Your trend reflections")
+                            st.markdown("#### Your trend reflections")
 
                             for trend_insight in trend_result["insights"]:
                                 st.markdown(f"- {trend_insight}")
 
                         # Personalized AI mood insights.
                         st.divider()
-                        st.subheader("🧠 Personalized AI Mood Insights")
+                        st.subheader("Personalized AI mood insights")
 
                         st.caption(
                             "Discover reflections based on your recorded "
@@ -1327,7 +1379,7 @@ with dashboard_tab:
                         )
 
                         if st.button(
-                            "✨ Generate my mood insights",
+                            "Generate my mood insights",
                             type="primary",
                             width="stretch",
                             key="generate_personalized_mood_insights",
@@ -1392,7 +1444,7 @@ with dashboard_tab:
                             )
 
                         # Mood distribution.
-                        st.markdown("### 🎨 Mood distribution")
+                        st.markdown("### Mood distribution")
 
                         mood_counts = (
                             filtered["mood"]
@@ -1441,22 +1493,14 @@ with dashboard_tab:
                                 names="Mood",
                                 values="Check-ins",
                                 hole=0.52,
-                                title="Your Mood Distribution",
-                                color_discrete_sequence=[
-                                    "#8ED6B0",
-                                    "#F2B880",
-                                    "#A9A4D8",
-                                    "#E58F91",
-                                    "#77A9D1",
-                                    "#B4C987",
-                                    "#76B7A0",
-                                ],
+                                title="Your mood distribution",
+                                color_discrete_sequence=CHART_COLORS,
                             )
 
                             fig_pie.update_traces(
                                 textposition="inside",
                                 textinfo="percent+label",
-                                marker=dict(line=dict(color="#172B25", width=2)),
+                                marker=dict(line=dict(color="#1E293B", width=2)),
                             )
 
                             st.plotly_chart(
@@ -1466,7 +1510,7 @@ with dashboard_tab:
 
 
                                                 # Daily intensity trend.
-                        st.markdown("### 📈 Mood intensity over time")
+                        st.markdown("### Mood intensity over time")
 
                         daily_intensity = (
                             filtered.groupby("date", as_index=False)
@@ -1513,7 +1557,7 @@ with dashboard_tab:
                         )
 
                         # Weekly mood patterns.
-                        st.markdown("### 🗓️ Weekly mood patterns")
+                        st.markdown("### Weekly mood patterns")
 
                         weekly_data = filtered.copy()
 
@@ -1552,7 +1596,7 @@ with dashboard_tab:
                             )
 
                         # Intensity by mood.
-                        st.markdown("### 💚 Intensity by recorded mood")
+                        st.markdown("### Intensity by recorded mood")
 
                         fig_box = px.box(
                             filtered,
@@ -1581,7 +1625,7 @@ with dashboard_tab:
                         )
 
                         # Automatic descriptive insights.
-                        st.markdown("### 💭 Personal reflection insights")
+                        st.markdown("### Personal reflection insights")
 
                         top_mood_row = mood_counts.sort_values(
                             "Check-ins",
@@ -1689,7 +1733,7 @@ with dashboard_tab:
                         ).encode("utf-8-sig")
 
                         st.download_button(
-                            label="⬇️ Download filtered mood data (CSV)",
+                            label="Download filtered mood data (CSV)",
                             data=csv_data,
                             file_name=(
                                 f"mindtrack_mood_{start_date}_"
@@ -1700,7 +1744,7 @@ with dashboard_tab:
 
                         # PDF report export.
                         st.divider()
-                        st.subheader("📄 Download your mood report")
+                        st.subheader("Download your mood report")
 
                         st.caption(
                             "Export the records currently selected by "
@@ -1719,7 +1763,7 @@ with dashboard_tab:
                                 )
 
                             st.download_button(
-                                label="⬇️ Download PDF Mood Report",
+                                label="Download PDF mood report",
                                 data=pdf_bytes,
                                 file_name=f"mindtrack_mood_report_{current_user['username']}.pdf",
                                 mime="application/pdf",
