@@ -137,7 +137,7 @@ st.markdown(
     [data-testid="stMetricValue"]{font-size:2.1rem;font-weight:700;color:var(--mt-text)!important}
     [data-testid="stMetricValue"] > div{white-space:normal!important;overflow-wrap:anywhere}
     [data-testid="stMetricLabel"]{color:var(--mt-muted)!important}
-    [data-testid="stPlotlyChart"]{padding:14px 10px 6px;overflow:hidden;border-radius:12px;background:var(--mt-surface)}
+    [data-testid="stPlotlyChart"]{padding:0!important;overflow:hidden;border-radius:12px;background:var(--mt-surface)}
     .js-plotly-plot .main-svg,.js-plotly-plot .svg-container{background:transparent!important}
     [data-testid="stDataFrame"]{overflow:hidden;border-radius:10px;border:1px solid var(--mt-line)}
     [data-testid="stExpander"]{background:transparent;border:none!important}
@@ -238,17 +238,20 @@ _chart_template.layout.update(
         gridcolor="rgba(148,163,184,.14)",
         zerolinecolor="rgba(148,163,184,.14)",
         linecolor="#334155",
+        automargin=True,
     ),
     yaxis=dict(
         gridcolor="rgba(148,163,184,.14)",
         zerolinecolor="rgba(148,163,184,.14)",
         linecolor="#334155",
+        automargin=True,
     ),
     hoverlabel=dict(
         bgcolor="#1E293B",
         bordercolor="#334155",
         font=dict(family="Figtree, system-ui, sans-serif", color="#F8FAFC"),
     ),
+    margin=dict(l=40, r=40, t=60, b=40),
 )
 px.defaults.template = _chart_template
 px.defaults.color_discrete_sequence = CHART_COLORS
@@ -1294,6 +1297,18 @@ with dashboard_tab:
                                 dtick=1,
                             )
 
+                            fig_trend.update_layout(
+                                margin=dict(l=40, r=40, t=70, b=40),
+                                legend=dict(
+                                    orientation="h",
+                                    yanchor="bottom",
+                                    y=1.02,
+                                    xanchor="right",
+                                    x=1,
+                                    title_text="",
+                                ),
+                            )
+
                             st.plotly_chart(
                                 fig_trend,
                                 width="stretch",
@@ -1330,6 +1345,10 @@ with dashboard_tab:
                                         },
                                     )
 
+                                    fig_weekdays.update_layout(
+                                        margin=dict(l=40, r=20, t=60, b=40),
+                                    )
+
                                     st.plotly_chart(
                                         fig_weekdays,
                                         width="stretch",
@@ -1355,6 +1374,10 @@ with dashboard_tab:
                                     fig_weekday_intensity.update_yaxes(
                                         range=[0.5, 5.5],
                                         dtick=1,
+                                    )
+
+                                    fig_weekday_intensity.update_layout(
+                                        margin=dict(l=40, r=20, t=60, b=40),
                                     )
 
                                     st.plotly_chart(
@@ -1478,9 +1501,11 @@ with dashboard_tab:
                                 xaxis_title="Number of check-ins",
                                 yaxis_title="",
                                 margin=dict(
-                                    l=10, r=10, t=60, b=10
+                                    l=80, r=40, t=60, b=40
                                 ),
                             )
+                            fig_distribution.update_yaxes(automargin=True)
+                            fig_distribution.update_xaxes(automargin=True)
 
                             st.plotly_chart(
                                 fig_distribution,
@@ -1503,13 +1528,23 @@ with dashboard_tab:
                                 marker=dict(line=dict(color="#1E293B", width=2)),
                             )
 
+                            fig_pie.update_layout(
+                                margin=dict(l=20, r=140, t=60, b=20),
+                                legend=dict(
+                                    x=1.02,
+                                    xanchor="left",
+                                    y=0.5,
+                                    yanchor="middle",
+                                ),
+                            )
+
                             st.plotly_chart(
                                 fig_pie,
                                 width="stretch",
                             )
 
 
-                                                # Daily intensity trend.
+                        # Daily intensity trend.
                         st.markdown("### Mood intensity over time")
 
                         daily_intensity = (
@@ -1545,6 +1580,10 @@ with dashboard_tab:
                             dtick=1,
                         )
 
+                        fig_intensity.update_layout(
+                            margin=dict(l=40, r=30, t=60, b=40),
+                        )
+
                         st.plotly_chart(
                             fig_intensity,
                             width="stretch",
@@ -1577,17 +1616,33 @@ with dashboard_tab:
                         )
 
                         if not weekly_counts.empty:
+                            weekly_counts["week_label"] = pd.to_datetime(
+                                weekly_counts["week"]
+                            ).dt.strftime("%d %b %Y")
+
                             fig_weekly = px.bar(
                                 weekly_counts,
-                                x="week",
+                                x="week_label",
                                 y="Check-ins",
                                 color="mood",
                                 barmode="stack",
                                 title="Recorded moods by week",
                                 labels={
-                                    "week": "Week starting",
+                                    "week_label": "Week starting",
                                     "mood": "Mood",
                                 },
+                            )
+
+                            fig_weekly.update_layout(
+                                xaxis=dict(type="category"),
+                                margin=dict(l=40, r=140, t=60, b=40),
+                                legend=dict(
+                                    title_text="Mood",
+                                    x=1.02,
+                                    xanchor="left",
+                                    y=1,
+                                    yanchor="top",
+                                ),
                             )
 
                             st.plotly_chart(
@@ -1617,7 +1672,10 @@ with dashboard_tab:
                             dtick=1,
                         )
 
-                        fig_box.update_layout(xaxis_title="")
+                        fig_box.update_layout(
+                            xaxis_title="",
+                            margin=dict(l=40, r=30, t=60, b=40),
+                        )
 
                         st.plotly_chart(
                             fig_box,
