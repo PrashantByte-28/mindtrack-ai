@@ -69,7 +69,7 @@ GROQ_API_KEY=your_groq_api_key_here
 streamlit run app.py
 
 
-The application will launch in your default web browser, typically at http://localhost:8501.
+The application will launch in your default web browser, typically at [http://localhost:8501.](https://mindtrack-wellness-ai.streamlit.app/)
 
 📂 Project Structure
 
