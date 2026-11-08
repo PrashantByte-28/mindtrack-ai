@@ -21,6 +21,12 @@ COPY . .
 # Install locked production dependencies
 RUN uv sync --frozen --no-dev
 
+# Keep the SQLite database on a volume so accounts survive container restarts.
+# Without a volume the database is deleted together with the container.
+RUN mkdir -p /data
+ENV MINDTRACK_DB_PATH=/data/mindtrack.db
+VOLUME ["/data"]
+
 # Streamlit port
 EXPOSE 8501
 

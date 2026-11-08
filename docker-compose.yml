@@ -1,0 +1,16 @@
+services:
+  mindtrack:
+    build: .
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    environment:
+      # The database lives on the named volume below, so accounts persist.
+      MINDTRACK_DB_PATH: /data/mindtrack.db
+    volumes:
+      - mindtrack-data:/data
+    restart: unless-stopped
+
+volumes:
+  mindtrack-data:

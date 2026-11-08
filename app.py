@@ -16,6 +16,20 @@ import plotly.graph_objects as go
 import plotly.io as pio
 import streamlit as st
 
+# Deployment: when the app runs on Streamlit Community Cloud, settings such as
+# DATABASE_URL and GROQ_API_KEY come from the app's "Secrets". Copy them into
+# environment variables so the rest of the code (which reads os.getenv) works
+# the same locally (.env) and when deployed. This must run before the
+# mindtrack_ai imports below, because database.py reads DATABASE_URL on import.
+try:
+    import os as _os
+
+    for _key, _value in st.secrets.items():
+        if isinstance(_value, (str, int, float, bool)) and _key not in _os.environ:
+            _os.environ[_key] = str(_value)
+except Exception:  # no secrets file locally; that is fine
+    pass
+
 from mindtrack_ai.auth import (
     authenticate_user,
     change_user_password,
@@ -226,10 +240,10 @@ _chart_template.layout.update(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
     colorway=CHART_COLORS,
-    font=dict(family="Figtree, system-ui, sans-serif", color="#F8FAFC", size=13),
+    font=dict(family="system-ui, -apple-system, 'Segoe UI', Arial, sans-serif", color="#F8FAFC", size=13),
     title=dict(
         font=dict(
-            family="Bricolage Grotesque, Figtree, sans-serif",
+            family="system-ui, -apple-system, 'Segoe UI', Arial, sans-serif",
             size=18,
             color="#F8FAFC",
         )
@@ -249,7 +263,7 @@ _chart_template.layout.update(
     hoverlabel=dict(
         bgcolor="#1E293B",
         bordercolor="#334155",
-        font=dict(family="Figtree, system-ui, sans-serif", color="#F8FAFC"),
+        font=dict(family="system-ui, -apple-system, 'Segoe UI', Arial, sans-serif", color="#F8FAFC"),
     ),
     margin=dict(l=40, r=40, t=60, b=40),
 )
@@ -1505,7 +1519,16 @@ with dashboard_tab:
                                 ),
                             )
                             fig_distribution.update_yaxes(automargin=True)
-                            fig_distribution.update_xaxes(automargin=True)
+                            fig_distribution.update_xaxes(
+                                automargin=True,
+                                dtick=1,
+                                tickformat="d",
+                                rangemode="tozero",
+                            )
+                            fig_distribution.update_traces(
+                                textposition="outside",
+                                cliponaxis=False,
+                            )
 
                             st.plotly_chart(
                                 fig_distribution,
@@ -1529,13 +1552,8 @@ with dashboard_tab:
                             )
 
                             fig_pie.update_layout(
-                                margin=dict(l=20, r=140, t=60, b=20),
-                                legend=dict(
-                                    x=1.02,
-                                    xanchor="left",
-                                    y=0.5,
-                                    yanchor="middle",
-                                ),
+                                margin=dict(l=20, r=20, t=60, b=20),
+                                showlegend=False,
                             )
 
                             st.plotly_chart(
@@ -1633,14 +1651,26 @@ with dashboard_tab:
                                 },
                             )
 
+                            week_order = (
+                                weekly_counts.sort_values("week")["week_label"]
+                                .drop_duplicates()
+                                .tolist()
+                            )
+
                             fig_weekly.update_layout(
-                                xaxis=dict(type="category"),
-                                margin=dict(l=40, r=140, t=60, b=40),
+                                xaxis=dict(
+                                    type="category",
+                                    categoryorder="array",
+                                    categoryarray=week_order,
+                                ),
+                                yaxis=dict(dtick=1, tickformat="d"),
+                                margin=dict(l=40, r=40, t=60, b=40),
                                 legend=dict(
-                                    title_text="Mood",
-                                    x=1.02,
-                                    xanchor="left",
-                                    y=1,
+                                    orientation="h",
+                                    title_text="",
+                                    x=0.5,
+                                    xanchor="center",
+                                    y=-0.28,
                                     yanchor="top",
                                 ),
                             )
